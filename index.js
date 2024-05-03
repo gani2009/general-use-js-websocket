@@ -51,7 +51,7 @@ app.ws('/websocket/:url', (ws, req) => {
 
 
 // your-code
-const socket = new WebSocket('wss://YOUR-URL-HERE');
+const socket = new WebSocket('wss://YOUR-URL-HERE/roomnumber');
 // your-code
 
 // To receive: 
