@@ -1,31 +1,68 @@
-require('dotenv').config();
-const express = require("express");
-const bodyParser = require("body-parser");
-const ejs = require("ejs");
+// How to do WebSockets in NodeJS with Express
 
-const app = express();
+// Server-side:
+
+// your-code
 var expressWs = require('express-ws')(app);
-app.use(express.static("public"));
-app.set('view engine', 'ejs');
-app.use(bodyParser.urlencoded({ extended: true }));
+const WebSocket = require('ws');
+const clientsByURL = {};
 
-let messageHistory = [];
+// Define WebSocket route
+app.ws('/websocket/:url', (ws, req) => {
+  const urlParam = req.params.url;
 
-app.ws('/chat', function(ws, req) {
-  ws.on('message', function(msg) {
-    expressWs.getWss().clients.forEach(client => {
-      client.send(msg);
-    });
-    messageHistory.push(msg);
+  // Store WebSocket client in the object based on URL
+  if (!clientsByURL[urlParam]) {
+    clientsByURL[urlParam] = [];
+  };
+  clientsByURL[urlParam].push(ws);
+
+
+  ws.on('message', (msg) => {
+    // Broadcast received message to all clients connected to the same URL
+    if (clientsByURL[urlParam]) {
+      clientsByURL[urlParam].forEach((client) => {
+        if (client !== ws && client.readyState === WebSocket.OPEN) {
+          client.send(msg);
+        }
+      });
+    }
+  });
+
+  ws.on('close', () => {
+    // Remove WebSocket client from the object when connection is closed
+    if (clientsByURL[urlParam]) {
+      clientsByURL[urlParam] = clientsByURL[urlParam].filter((client) => client !== ws);
+      if (clientsByURL[urlParam].length === 0) {
+        delete clientsByURL[urlParam];
+      }
+    };
   });
 });
+// your-code
 
-app.use((req, res) => {
-  //render page not found
-  res.redirect('/');
+
+// _________________________________________________________________________________________________
+
+// Note: the URL part doesn't work, so you must implement it yourself. 
+// This code sends the message received to all the other clients. 
+
+// Client-side:
+
+
+// your-code
+const socket = new WebSocket('wss://YOUR-URL-HERE');
+// your-code
+
+// To receive: 
+socket.addEventListener("message", msg => {
+  console.log(msg);
+  // Stuff you want to do with the message(msg)
 });
 
-//Start Server
-app.listen(process.env.PORT, () => {
-  console.log("Server listening on port " + process.env.PORT);
-});
+// your-code
+
+// To send: 
+socket.send("Message to the server and all other clients. ");
+
+// your-code
